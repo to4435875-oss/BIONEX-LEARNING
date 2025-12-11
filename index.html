@@ -2,10 +2,10 @@
 <html lang="vi">
 <head>
 <meta charset="UTF-8">
-<title>Test Mê cung</title>
+<title>Mê cung học tập</title>
 <style>
-  #grid { display:grid; grid-template-columns: repeat(15, 36px); gap:4px; }
-  .cell { width:36px; height:36px; }
+  #grid { display:grid; grid-template-columns: repeat(15, 32px); gap:2px; }
+  .cell { width:32px; height:32px; }
   .wall { background:#ba68c8; }
   .path { background:#fce4ec; }
   .door { background:#fff9c4; }
@@ -13,8 +13,9 @@
 </style>
 </head>
 <body>
-<h3>Bản đồ mê cung</h3>
+<h3>Bản đồ mê cung 🎮</h3>
 <div id="grid"></div>
+
 <script>
 const size=15;
 const map=[
@@ -38,7 +39,10 @@ const grid=document.getElementById("grid");
 for(let y=0;y<size;y++){
   for(let x=0;x<size;x++){
     const cell=document.createElement("div");
-    cell.className="cell "+(map[y][x]===1?"wall":map[y][x]===2?"door":map[y][x]===3?"goal":"path");
+    if(map[y][x]===1) cell.className="cell wall";
+    else if(map[y][x]===2) cell.className="cell door";
+    else if(map[y][x]===3) cell.className="cell goal";
+    else cell.className="cell path";
     grid.appendChild(cell);
   }
 }
