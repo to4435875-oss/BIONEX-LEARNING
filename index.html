@@ -3,46 +3,56 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Mê cung học tập</title>
+  <title>Mê cung học tập dễ thương</title>
   <style>
-    body { font-family: sans-serif; display:flex; gap:24px; margin:20px; }
-    #grid { display:grid; grid-template-columns: repeat(10, 32px); gap:2px; }
-    .cell { width:32px; height:32px; display:flex; align-items:center; justify-content:center; }
-    .wall { background:#333; }
-    .path { background:#eee; }
-    .door { background:#ffd54f; cursor:pointer; }
-    .player { background:#4fc3f7; }
-    #panel { max-width:360px; }
-    button { margin-top:8px; display:block; }
+    body { font-family: "Comic Sans MS", sans-serif; display:flex; gap:24px; margin:20px; background:#fffde7; }
+    #grid { display:grid; grid-template-columns: repeat(15, 36px); gap:2px; }
+    .cell { width:36px; height:36px; display:flex; align-items:center; justify-content:center; font-size:22px; }
+    .wall { background:#ba68c8; border-radius:8px; }
+    .path { background:#fce4ec; border-radius:8px; }
+    .door { background:#fff9c4; border-radius:8px; }
+    .door::after { content:"📚"; }
+    .player { background:#bbdefb; border-radius:50%; }
+    .player::after { content:"🎓"; }
+    .goal { background:#c8e6c9; border-radius:8px; }
+    .goal::after { content:"🏆"; }
+    #panel { max-width:360px; background:#f3e5f5; padding:12px; border-radius:12px; }
+    button { margin-top:8px; display:block; padding:6px 12px; border:none; border-radius:6px; background:#4fc3f7; color:#fff; cursor:pointer; }
+    button:hover { background:#0288d1; }
   </style>
 </head>
 <body>
   <div>
-    <h3>Bản đồ mê cung</h3>
+    <h3>Bản đồ mê cung 🎮</h3>
     <div id="grid"></div>
   </div>
   <div id="panel">
-    <h3>Câu hỏi</h3>
-    <div id="questionBox">Di chuyển bằng phím mũi tên. Chạm ô vàng (cửa) để trả lời.</div>
+    <h3>Câu hỏi ✨</h3>
+    <div id="questionBox">Di chuyển bằng phím mũi tên. Chạm 📚 để trả lời. Phải mở hết cửa mới đến 🏆.</div>
   </div>
 
 <script type="module">
-const size = 10;
+const size = 15;
 const gridEl = document.getElementById('grid');
 const questionBox = document.getElementById('questionBox');
 
-// Mê cung đơn giản: 0 = đường, 1 = tường, 2 = cửa
+// 0 = đường, 1 = tường, 2 = cửa câu hỏi, 3 = đích
 const map = [
-  [0,1,0,0,0,0,0,0,2,0],
-  [0,1,0,1,1,1,0,0,1,0],
-  [0,0,0,0,2,1,0,1,0,0],
-  [1,1,1,0,0,1,0,1,0,1],
-  [0,0,0,0,0,0,0,1,2,0],
-  [0,1,1,1,1,1,0,0,0,0],
-  [0,0,0,0,2,0,0,1,1,0],
-  [1,1,0,1,0,0,0,0,0,0],
-  [0,0,0,1,0,1,0,1,2,0],
-  [0,1,0,0,0,0,0,0,0,0],
+  [0,1,0,0,0,0,0,0,2,0,0,1,0,0,0],
+  [0,1,0,1,1,1,0,0,1,0,0,1,0,1,0],
+  [0,0,0,0,2,1,0,1,0,0,0,0,0,1,0],
+  [1,1,1,0,0,1,0,1,0,1,1,1,0,1,0],
+  [0,0,0,0,0,0,0,1,2,0,0,0,0,0,0],
+  [0,1,1,1,1,1,0,0,0,0,1,1,1,1,0],
+  [0,0,0,0,2,0,0,1,1,0,0,0,0,0,0],
+  [1,1,0,1,0,0,0,0,0,0,1,1,0,1,0],
+  [0,0,0,1,0,1,0,1,2,0,0,0,0,1,0],
+  [0,1,0,0,0,0,0,0,0,0,1,0,0,1,0],
+  [0,0,0,1,1,1,0,1,0,0,0,0,0,0,0],
+  [0,1,0,0,0,0,0,1,0,1,1,1,0,1,0],
+  [0,0,0,1,0,0,0,0,0,0,0,0,0,1,0],
+  [0,1,0,1,0,1,0,1,0,1,0,1,0,1,0],
+  [0,0,0,0,0,0,0,0,0,0,0,0,0,0,3], // đích ở góc phải dưới
 ];
 
 const questions = [
@@ -55,13 +65,18 @@ const questions = [
 
 const doors = [];
 let player = { x:0, y:0, score:0 };
+let doorsOpened = 0;
 
 function render() {
   gridEl.innerHTML='';
   for (let y=0; y<size; y++) {
     for (let x=0; x<size; x++) {
       const cell = document.createElement('div');
-      cell.className = 'cell ' + (map[y][x]===1?'wall':map[y][x]===2?'door':'path');
+      let cls = 'path';
+      if (map[y][x]===1) cls='wall';
+      if (map[y][x]===2) cls='door';
+      if (map[y][x]===3) cls='goal';
+      cell.className = 'cell ' + cls;
       if (player.x===x && player.y===y) cell.className='cell player';
       gridEl.appendChild(cell);
     }
@@ -73,14 +88,14 @@ function linkDoorsToQuestions() {
   for (let y=0; y<size; y++) {
     for (let x=0; x<size; x++) {
       if (map[y][x]===2) {
-        doors.push({ x,y,q:questions[qi % questions.length] });
+        doors.push({ x,y,q:questions[qi % questions.length], opened:false });
         qi++;
       }
     }
   }
 }
 
-function ask(q, onResult) {
+function ask(q, door, onResult) {
   const wrapper = document.createElement('div');
   const title = document.createElement('p'); title.textContent = q.text;
   const list = document.createElement('div');
@@ -90,9 +105,9 @@ function ask(q, onResult) {
     btn.onclick = ()=>{
       const correct = i===q.correct;
       questionBox.innerHTML = correct
-        ? `Đúng! +10 điểm. Giải thích: ${q.hint}`
-        : `Sai rồi. Gợi ý: ${q.hint}`;
-      onResult(correct);
+        ? `✅ Đúng! +10 điểm. Giải thích: ${q.hint}`
+        : `❌ Sai rồi. Gợi ý: ${q.hint}`;
+      onResult(correct, door);
     };
     list.appendChild(btn);
   });
@@ -102,11 +117,13 @@ function ask(q, onResult) {
 
 function tryOpenDoor(dx,dy) {
   const door = doors.find(d=> d.x===dx && d.y===dy);
-  if (!door) return;
-  ask(door.q, (ok)=>{
+  if (!door || door.opened) return;
+  ask(door.q, door, (ok,door)=>{
     if (ok) {
       player.score += 10;
       map[dy][dx] = 0; // mở cửa thành đường
+      door.opened = true;
+      doorsOpened++;
       render();
       questionBox.innerHTML += `<p>Điểm hiện tại: ${player.score}</p>`;
     }
@@ -122,13 +139,7 @@ document.addEventListener('keydown', (e)=>{
   const tile = map[ny][nx];
   if (tile===1) return;           // tường
   if (tile===2) return tryOpenDoor(nx,ny); // cửa: hỏi
-  player.x = nx; player.y = ny;
-  render();
-});
-
-linkDoorsToQuestions();
-render();
-questionBox.innerHTML += `<p>Điểm hiện tại: ${player.score}</p>`;
-</script>
-</body>
-</html>
+  if (tile===3) {
+    if (doorsOpened === doors.length) {
+      questionBox.innerHTML = `<p>🎉 Chúc mừng! Bạn đã đến đích với ${player.score} điểm.</p>`;
+      player.x = nx
