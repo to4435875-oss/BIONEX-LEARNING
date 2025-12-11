@@ -1,0 +1,134 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Mê cung học tập</title>
+  <style>
+    body { font-family: sans-serif; display:flex; gap:24px; margin:20px; }
+    #grid { display:grid; grid-template-columns: repeat(10, 32px); gap:2px; }
+    .cell { width:32px; height:32px; display:flex; align-items:center; justify-content:center; }
+    .wall { background:#333; }
+    .path { background:#eee; }
+    .door { background:#ffd54f; cursor:pointer; }
+    .player { background:#4fc3f7; }
+    #panel { max-width:360px; }
+    button { margin-top:8px; display:block; }
+  </style>
+</head>
+<body>
+  <div>
+    <h3>Bản đồ mê cung</h3>
+    <div id="grid"></div>
+  </div>
+  <div id="panel">
+    <h3>Câu hỏi</h3>
+    <div id="questionBox">Di chuyển bằng phím mũi tên. Chạm ô vàng (cửa) để trả lời.</div>
+  </div>
+
+<script type="module">
+const size = 10;
+const gridEl = document.getElementById('grid');
+const questionBox = document.getElementById('questionBox');
+
+// Mê cung đơn giản: 0 = đường, 1 = tường, 2 = cửa
+const map = [
+  [0,1,0,0,0,0,0,0,2,0],
+  [0,1,0,1,1,1,0,0,1,0],
+  [0,0,0,0,2,1,0,1,0,0],
+  [1,1,1,0,0,1,0,1,0,1],
+  [0,0,0,0,0,0,0,1,2,0],
+  [0,1,1,1,1,1,0,0,0,0],
+  [0,0,0,0,2,0,0,1,1,0],
+  [1,1,0,1,0,0,0,0,0,0],
+  [0,0,0,1,0,1,0,1,2,0],
+  [0,1,0,0,0,0,0,0,0,0],
+];
+
+const questions = [
+  { text:'2/3 + 1/3 = ?', choices:['1','2/3','3/3','0'], correct:2, hint:'Cùng mẫu số: cộng tử số.' },
+  { text:'Danh từ trong câu: “Con mèo ngủ.”', choices:['Con','mèo','ngủ'], correct:1, hint:'Danh từ là người/vật/sự việc.' },
+  { text:'Diện tích hình vuông cạnh 5?', choices:['25','10','5'], correct:0, hint:'S = a^2.' },
+  { text:'Từ trái nghĩa của “cao”?', choices:['thấp','dài','rộng'], correct:0, hint:'Đối nghĩa về độ cao.' },
+  { text:'Giải phương trình x+4=7', choices:['x=1','x=3','x=4'], correct:1, hint:'Trừ 4 hai vế.' },
+];
+
+const doors = [];
+let player = { x:0, y:0, score:0 };
+
+function render() {
+  gridEl.innerHTML='';
+  for (let y=0; y<size; y++) {
+    for (let x=0; x<size; x++) {
+      const cell = document.createElement('div');
+      cell.className = 'cell ' + (map[y][x]===1?'wall':map[y][x]===2?'door':'path');
+      if (player.x===x && player.y===y) cell.className='cell player';
+      gridEl.appendChild(cell);
+    }
+  }
+}
+
+function linkDoorsToQuestions() {
+  let qi=0;
+  for (let y=0; y<size; y++) {
+    for (let x=0; x<size; x++) {
+      if (map[y][x]===2) {
+        doors.push({ x,y,q:questions[qi % questions.length] });
+        qi++;
+      }
+    }
+  }
+}
+
+function ask(q, onResult) {
+  const wrapper = document.createElement('div');
+  const title = document.createElement('p'); title.textContent = q.text;
+  const list = document.createElement('div');
+  q.choices.forEach((c,i)=>{
+    const btn = document.createElement('button');
+    btn.textContent = c;
+    btn.onclick = ()=>{
+      const correct = i===q.correct;
+      questionBox.innerHTML = correct
+        ? `Đúng! +10 điểm. Giải thích: ${q.hint}`
+        : `Sai rồi. Gợi ý: ${q.hint}`;
+      onResult(correct);
+    };
+    list.appendChild(btn);
+  });
+  wrapper.appendChild(title); wrapper.appendChild(list);
+  questionBox.innerHTML=''; questionBox.appendChild(wrapper);
+}
+
+function tryOpenDoor(dx,dy) {
+  const door = doors.find(d=> d.x===dx && d.y===dy);
+  if (!door) return;
+  ask(door.q, (ok)=>{
+    if (ok) {
+      player.score += 10;
+      map[dy][dx] = 0; // mở cửa thành đường
+      render();
+      questionBox.innerHTML += `<p>Điểm hiện tại: ${player.score}</p>`;
+    }
+  });
+}
+
+document.addEventListener('keydown', (e)=>{
+  const dir = { ArrowUp:[0,-1], ArrowDown:[0,1], ArrowLeft:[-1,0], ArrowRight:[1,0] }[e.key];
+  if (!dir) return;
+  const nx = player.x + dir[0];
+  const ny = player.y + dir[1];
+  if (nx<0||ny<0||nx>=size||ny>=size) return;
+  const tile = map[ny][nx];
+  if (tile===1) return;           // tường
+  if (tile===2) return tryOpenDoor(nx,ny); // cửa: hỏi
+  player.x = nx; player.y = ny;
+  render();
+});
+
+linkDoorsToQuestions();
+render();
+questionBox.innerHTML += `<p>Điểm hiện tại: ${player.score}</p>`;
+</script>
+</body>
+</html>
