@@ -6,7 +6,7 @@
   <title>Mê cung học tập dễ thương</title>
   <style>
     body { font-family: "Comic Sans MS", sans-serif; display:flex; gap:24px; margin:20px; background:#fffde7; }
-    #grid { display:grid; grid-template-columns: repeat(15, 36px); gap:2px; }
+    #grid { display:grid; grid-template-columns: repeat(15, 36px); gap:4px; }
     .cell { width:36px; height:36px; display:flex; align-items:center; justify-content:center; font-size:22px; }
     .wall { background:#ba68c8; border-radius:8px; }
     .path { background:#fce4ec; border-radius:8px; }
@@ -16,25 +16,37 @@
     .player::after { content:"🎓"; }
     .goal { background:#c8e6c9; border-radius:8px; }
     .goal::after { content:"🏆"; }
-    #panel { max-width:360px; background:#f3e5f5; padding:12px; border-radius:12px; }
-    button { margin-top:8px; display:block; padding:6px 12px; border:none; border-radius:6px; background:#4fc3f7; color:#fff; cursor:pointer; }
+    #panel { max-width:380px; background:#f3e5f5; padding:12px; border-radius:12px; }
+    button { margin-top:8px; display:block; padding:8px 12px; border:none; border-radius:6px; background:#4fc3f7; color:#fff; cursor:pointer; }
     button:hover { background:#0288d1; }
+    #hud { margin-top:8px; font-weight:bold; }
+    #controls { display:flex; gap:8px; margin-top:12px; }
+    #controls button { background:#81c784; }
+    #controls button:hover { background:#43a047; }
   </style>
 </head>
 <body>
   <div>
     <h3>Bản đồ mê cung 🎮</h3>
     <div id="grid"></div>
+    <div id="controls">
+      <button id="up">↑</button>
+      <button id="left">←</button>
+      <button id="down">↓</button>
+      <button id="right">→</button>
+    </div>
   </div>
   <div id="panel">
     <h3>Câu hỏi ✨</h3>
-    <div id="questionBox">Di chuyển bằng phím mũi tên. Chạm 📚 để trả lời. Phải mở hết cửa mới đến 🏆.</div>
+    <div id="questionBox">Di chuyển bằng phím mũi tên hoặc nút. Chạm 📚 để trả lời. Phải mở hết cửa mới đến 🏆.</div>
+    <div id="hud">Điểm: 0 | Cửa đã mở: 0</div>
   </div>
 
 <script type="module">
 const size = 15;
 const gridEl = document.getElementById('grid');
 const questionBox = document.getElementById('questionBox');
+const hud = document.getElementById('hud');
 
 // 0 = đường, 1 = tường, 2 = cửa câu hỏi, 3 = đích
 const map = [
@@ -67,6 +79,10 @@ const doors = [];
 let player = { x:0, y:0, score:0 };
 let doorsOpened = 0;
 
+function updateHud() {
+  hud.textContent = `Điểm: ${player.score} | Cửa đã mở: ${doorsOpened}/${doors.length}`;
+}
+
 function render() {
   gridEl.innerHTML='';
   for (let y=0; y<size; y++) {
@@ -84,6 +100,7 @@ function render() {
 }
 
 function linkDoorsToQuestions() {
+  doors.length = 0;
   let qi=0;
   for (let y=0; y<size; y++) {
     for (let x=0; x<size; x++) {
@@ -93,6 +110,7 @@ function linkDoorsToQuestions() {
       }
     }
   }
+  updateHud();
 }
 
 function ask(q, door, onResult) {
@@ -117,29 +135,9 @@ function ask(q, door, onResult) {
 
 function tryOpenDoor(dx,dy) {
   const door = doors.find(d=> d.x===dx && d.y===dy);
-  if (!door || door.opened) return;
+  if (!door) return;
+  if (door.opened) { player.x=dx; player.y=dy; render(); return; }
   ask(door.q, door, (ok,door)=>{
     if (ok) {
       player.score += 10;
-      map[dy][dx] = 0; // mở cửa thành đường
-      door.opened = true;
-      doorsOpened++;
-      render();
-      questionBox.innerHTML += `<p>Điểm hiện tại: ${player.score}</p>`;
-    }
-  });
-}
-
-document.addEventListener('keydown', (e)=>{
-  const dir = { ArrowUp:[0,-1], ArrowDown:[0,1], ArrowLeft:[-1,0], ArrowRight:[1,0] }[e.key];
-  if (!dir) return;
-  const nx = player.x + dir[0];
-  const ny = player.y + dir[1];
-  if (nx<0||ny<0||nx>=size||ny>=size) return;
-  const tile = map[ny][nx];
-  if (tile===1) return;           // tường
-  if (tile===2) return tryOpenDoor(nx,ny); // cửa: hỏi
-  if (tile===3) {
-    if (doorsOpened === doors.length) {
-      questionBox.innerHTML = `<p>🎉 Chúc mừng! Bạn đã đến đích với ${player.score} điểm.</p>`;
-      player.x = nx
+      map[dy][dx] = 0;
