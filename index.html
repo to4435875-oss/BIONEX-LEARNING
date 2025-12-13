@@ -2,161 +2,90 @@
 <html lang="vi">
 <head>
 <meta charset="UTF-8">
-<title>Mê cung học tập dễ thương</title>
+<title>Mê cung trắc nghiệm</title>
 <style>
-  body { font-family:"Comic Sans MS",sans-serif; display:flex; gap:24px; margin:20px; background:#fffde7; }
-  #grid { display:grid; grid-template-columns: repeat(15, 32px); gap:2px; }
-  .cell { width:32px; height:32px; display:flex; align-items:center; justify-content:center; font-size:20px; }
-  .wall { background:#ba68c8; border-radius:6px; }
-  .path { background:#fce4ec; border-radius:6px; }
-  .door { background:#fff9c4; border-radius:6px; }
-  .door::after { content:"📚"; }
-  .player { background:#bbdefb; border-radius:50%; }
-  .player::after { content:"🎓"; }
-  .goal { background:#c8e6c9; border-radius:6px; }
-  .goal::after { content:"🏆"; }
-  #panel { max-width:360px; background:#f3e5f5; padding:12px; border-radius:12px; }
-  button { margin-top:6px; padding:6px 10px; border:none; border-radius:6px; background:#4fc3f7; color:#fff; cursor:pointer; }
-  button:hover { background:#0288d1; }
-  #hud { margin-top:8px; font-weight:bold; }
-  #controls { display:flex; gap:6px; margin-top:12px; }
-  #controls button { background:#81c784; }
-  #controls button:hover { background:#43a047; }
+  canvas { border:1px solid #333; }
+  #quiz { display:none; background:#fff; padding:10px; border:1px solid #333; }
 </style>
 </head>
 <body>
-  <div>
-    <h3>Bản đồ mê cung 🎮</h3>
-    <div id="grid"></div>
-    <div id="controls">
-      <button id="up">↑</button>
-      <button id="left">←</button>
-      <button id="down">↓</button>
-      <button id="right">→</button>
-    </div>
-  </div>
-  <div id="panel">
-    <h3>Câu hỏi ✨</h3>
-    <div id="questionBox">Di chuyển bằng phím mũi tên hoặc nút. Chạm 📚 để trả lời. Phải mở hết cửa mới đến 🏆.</div>
-    <div id="hud">Điểm: 0 | Cửa đã mở: 0</div>
-  </div>
-
+<canvas id="maze" width="672" height="672"></canvas>
+<div id="quiz"></div>
 <script>
-const size=15;
-const gridEl=document.getElementById("grid");
-const questionBox=document.getElementById("questionBox");
-const hud=document.getElementById("hud");
+// ====== Load câu hỏi từ localStorage ======
+let questions = JSON.parse(localStorage.getItem("quizData") || "[]");
 
-const map=[
- [0,1,0,0,0,0,0,0,2,0,0,1,0,0,0],
- [0,1,0,1,1,1,0,0,1,0,0,1,0,1,0],
- [0,0,0,0,2,1,0,1,0,0,0,0,0,1,0],
- [1,1,1,0,0,1,0,1,0,1,1,1,0,1,0],
- [0,0,0,0,0,0,0,1,2,0,0,0,0,0,0],
- [0,1,1,1,1,1,0,0,0,0,1,1,1,1,0],
- [0,0,0,0,2,0,0,1,1,0,0,0,0,0,0],
- [1,1,0,1,0,0,0,0,0,0,1,1,0,1,0],
- [0,0,0,1,0,1,0,1,2,0,0,0,0,1,0],
- [0,1,0,0,0,0,0,0,0,0,1,0,0,1,0],
- [0,0,0,1,1,1,0,1,0,0,0,0,0,0,0],
- [0,1,0,0,0,0,0,1,0,1,1,1,0,1,0],
- [0,0,0,1,0,0,0,0,0,0,0,0,0,1,0],
- [0,1,0,1,0,1,0,1,0,1,0,1,0,1,0],
- [0,0,0,0,0,0,0,0,0,0,0,0,0,0,3]
-];
+// ====== Maze setup ======
+const W = 21, H = 21, CELL = 32;
+const canvas = document.getElementById('maze');
+const ctx = canvas.getContext('2d');
+let grid = Array.from({length:H}, ()=>Array(W).fill(1));
+let player = {x:1, y:1};
+let openedDirections = new Set();
 
-const questions=[
- {text:"2/3 + 1/3 = ?",choices:["1","2/3","3/3","0"],correct:2,hint:"Cùng mẫu số: cộng tử số."},
- {text:"Danh từ trong câu: “Con mèo ngủ.”",choices:["Con","mèo","ngủ"],correct:1,hint:"Danh từ là người/vật/sự việc."},
- {text:"Diện tích hình vuông cạnh 5?",choices:["25","10","5"],correct:0,hint:"S = a^2."},
- {text:"Từ trái nghĩa của “cao”?",choices:["thấp","dài","rộng"],correct:0,hint:"Đối nghĩa về độ cao."},
- {text:"Giải phương trình x+4=7",choices:["x=1","x=3","x=4"],correct:1,hint:"Trừ 4 hai vế."}
-];
-
-const doors=[];
-let player={x:0,y:0,score:0};
-let doorsOpened=0;
-
-function updateHud(){
- hud.textContent=`Điểm: ${player.score} | Cửa đã mở: ${doorsOpened}/${doors.length}`;
+function carveDFS(x,y){
+  grid[y][x]=0;
+  const dirs=[[2,0],[0,2],[-2,0],[0,-2]].sort(()=>Math.random()-0.5);
+  for(const [dx,dy] of dirs){
+    const nx=x+dx, ny=y+dy;
+    if(nx>0&&ny>0&&nx<W-1&&ny<H-1&&grid[ny][nx]===1){
+      grid[y+dy/2][x+dx/2]=0;
+      carveDFS(nx,ny);
+    }
+  }
 }
-
-function render(){
- gridEl.innerHTML="";
- for(let y=0;y<size;y++){
-   for(let x=0;x<size;x++){
-     const cell=document.createElement("div");
-     let cls="path";
-     if(map[y][x]===1) cls="wall";
-     if(map[y][x]===2) cls="door";
-     if(map[y][x]===3) cls="goal";
-     cell.className="cell "+cls;
-     if(player.x===x && player.y===y) cell.className="cell player";
-     gridEl.appendChild(cell);
-   }
- }
+function isJunction(x,y){
+  if(grid[y][x]===1) return false;
+  let open=0;
+  for(const [dx,dy] of [[1,0],[-1,0],[0,1],[0,-1]]){
+    if(grid[y+dy]?.[x+dx]===0) open++;
+  }
+  return open>=3;
 }
-
-function linkDoorsToQuestions(){
- doors.length=0;
- let qi=0;
- for(let y=0;y<size;y++){
-   for(let x=0;x<size;x++){
-     if(map[y][x]===2){
-       doors.push({x,y,q:questions[qi%questions.length],opened:false});
-       qi++;
-     }
-   }
- }
- updateHud();
+function draw(){
+  ctx.fillStyle='#222'; ctx.fillRect(0,0,canvas.width,canvas.height);
+  for(let y=0;y<H;y++){
+    for(let x=0;x<W;x++){
+      if(grid[y][x]===0){
+        ctx.fillStyle='#eee'; ctx.fillRect(x*CELL,y*CELL,CELL,CELL);
+        if(isJunction(x,y)){
+          ctx.fillStyle='#ffd54f';
+          ctx.fillRect(x*CELL+8,y*CELL+8,CELL-16,CELL-16);
+        }
+      }
+    }
+  }
+  ctx.fillStyle='#29b6f6';
+  ctx.fillRect(player.x*CELL+6,player.y*CELL+6,CELL-12,CELL-12);
 }
-
-function ask(q,door,onResult){
- const wrapper=document.createElement("div");
- const title=document.createElement("p"); title.textContent=q.text;
- const list=document.createElement("div");
- q.choices.forEach((c,i)=>{
-   const btn=document.createElement("button");
-   btn.textContent=c;
-   btn.onclick=()=>{
-     const correct=i===q.correct;
-     questionBox.innerHTML=correct?`✅ Đúng! +10 điểm. Giải thích: ${q.hint}`:`❌ Sai rồi. Gợi ý: ${q.hint}`;
-     onResult(correct,door);
-   };
-   list.appendChild(btn);
- });
- wrapper.appendChild(title); wrapper.appendChild(list);
- questionBox.innerHTML=""; questionBox.appendChild(wrapper);
+function askQuestion(dirKey,cbOpen){
+  if(questions.length===0){ alert("Chưa có câu hỏi!"); cbOpen(); return; }
+  const q=questions[Math.floor(Math.random()*questions.length)];
+  const quiz=document.getElementById('quiz');
+  quiz.style.display='block';
+  quiz.innerHTML=`<p>${q.prompt}</p>`+q.choices.map((c,i)=>`<button data-i="${i}">${c}</button>`).join('');
+  quiz.onclick=(e)=>{
+    const i=Number(e.target.getAttribute('data-i'));
+    quiz.style.display='none';
+    if(i===q.answerIndex){ openedDirections.add(dirKey); cbOpen(); }
+    else{ alert("Sai rồi!"); }
+  };
 }
-
-function tryOpenDoor(dx,dy){
- const door=doors.find(d=>d.x===dx && d.y===dy);
- if(!door) return;
- if(door.opened){ player.x=dx; player.y=dy; render(); return; }
- ask(door.q,door,(ok,door)=>{
-   if(ok){
-     player.score+=10;
-     map[dy][dx]=0;
-     door.opened=true;
-     doorsOpened++;
-     render();
-     updateHud();
-   }
- });
+function tryMove(dx,dy){
+  const nx=player.x+dx, ny=player.y+dy;
+  if(grid[ny]?.[nx]!==0) return;
+  const dirKey=`${player.y},${player.x}->${ny},${nx}`;
+  if(isJunction(player.x,player.y)&&!openedDirections.has(dirKey)){
+    askQuestion(dirKey,()=>{ player.x=nx; player.y=ny; draw(); });
+  } else { player.x=nx; player.y=ny; draw(); }
 }
-
-function moveBy(dx,dy){
- const nx=player.x+dx;
- const ny=player.y+dy;
- if(nx<0||ny<0||nx>=size||ny>=size) return;
- const tile=map[ny][nx];
- if(tile===1) return;
- if(tile===2){ tryOpenDoor(nx,ny); return; }
- if(tile===3){
-   if(doorsOpened===doors.length){
-     player.x=nx; player.y=ny; render();
-     questionBox.innerHTML=`🎉 Chúc mừng! Bạn đã đến đích với ${player.score} điểm.`;
-   } else {
-     questionBox.innerHTML=`⚠️ Bạn phải mở hết cửa câu hỏi trước khi đến đích!`;
-   }
-   return
+document.addEventListener('keydown',(e)=>{
+  if(e.key==='ArrowUp') tryMove(0,-1);
+  if(e.key==='ArrowDown') tryMove(0,1);
+  if(e.key==='ArrowLeft') tryMove(-1,0);
+  if(e.key==='ArrowRight') tryMove(1,0);
+});
+carveDFS(1,1); draw();
+</script>
+</body>
+</html>
