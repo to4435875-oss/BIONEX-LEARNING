@@ -4,25 +4,32 @@
 <meta charset="UTF-8">
 <title>Mê cung trắc nghiệm</title>
 <style>
-  canvas { border:1px solid #333; }
-  #quiz { display:none; background:#fff; padding:10px; border:1px solid #333; }
+  canvas { border:1px solid #333; display:block; margin:10px auto; }
+  #quiz { display:none; background:#fff; padding:10px; border:1px solid #333; max-width:400px; margin:10px auto; }
+  #timer { text-align:center; font-size:18px; margin:10px; }
 </style>
 </head>
 <body>
+<h2 style="text-align:center">🎮 Trò chơi Mê cung Trắc nghiệm</h2>
+<div id="timer">⏱ Thời gian: 0 giây</div>
 <canvas id="maze" width="672" height="672"></canvas>
 <div id="quiz"></div>
-<script>
-// ====== Load câu hỏi từ localStorage ======
-let questions = JSON.parse(localStorage.getItem("quizData") || "[]");
 
-// ====== Maze setup ======
+<script>
 const W = 21, H = 21, CELL = 32;
 const canvas = document.getElementById('maze');
 const ctx = canvas.getContext('2d');
 let grid = Array.from({length:H}, ()=>Array(W).fill(1));
 let player = {x:1, y:1};
+let goal = {x:W-2, y:H-2};
 let openedDirections = new Set();
+let startTime = Date.now();
+let timerInterval;
 
+// ====== Load câu hỏi từ localStorage ======
+let questions = JSON.parse(localStorage.getItem("quizData") || "[]");
+
+// ====== Sinh mê cung ======
 function carveDFS(x,y){
   grid[y][x]=0;
   const dirs=[[2,0],[0,2],[-2,0],[0,-2]].sort(()=>Math.random()-0.5);
@@ -42,6 +49,8 @@ function isJunction(x,y){
   }
   return open>=3;
 }
+
+// ====== Vẽ mê cung ======
 function draw(){
   ctx.fillStyle='#222'; ctx.fillRect(0,0,canvas.width,canvas.height);
   for(let y=0;y<H;y++){
@@ -55,37 +64,66 @@ function draw(){
       }
     }
   }
+  // Vạch đích
+  ctx.fillStyle='#4caf50';
+  ctx.fillRect(goal.x*CELL+4, goal.y*CELL+4, CELL-8, CELL-8);
+  // Người chơi
   ctx.fillStyle='#29b6f6';
   ctx.fillRect(player.x*CELL+6,player.y*CELL+6,CELL-12,CELL-12);
 }
+
+// ====== Câu hỏi ======
 function askQuestion(dirKey,cbOpen){
   if(questions.length===0){ alert("Chưa có câu hỏi!"); cbOpen(); return; }
   const q=questions[Math.floor(Math.random()*questions.length)];
   const quiz=document.getElementById('quiz');
   quiz.style.display='block';
-  quiz.innerHTML=`<p>${q.prompt}</p>`+q.choices.map((c,i)=>`<button data-i="${i}">${c}</button>`).join('');
+  quiz.innerHTML=`<p><b>${q.prompt}</b></p>`+q.choices.map((c,i)=>`<button data-i="${i}">${c}</button>`).join('');
   quiz.onclick=(e)=>{
     const i=Number(e.target.getAttribute('data-i'));
+    if(isNaN(i)) return;
     quiz.style.display='none';
     if(i===q.answerIndex){ openedDirections.add(dirKey); cbOpen(); }
-    else{ alert("Sai rồi!"); }
+    else{ alert("❌ Sai rồi!"); }
   };
 }
+
+// ====== Di chuyển ======
 function tryMove(dx,dy){
   const nx=player.x+dx, ny=player.y+dy;
   if(grid[ny]?.[nx]!==0) return;
   const dirKey=`${player.y},${player.x}->${ny},${nx}`;
   if(isJunction(player.x,player.y)&&!openedDirections.has(dirKey)){
-    askQuestion(dirKey,()=>{ player.x=nx; player.y=ny; draw(); });
-  } else { player.x=nx; player.y=ny; draw(); }
+    askQuestion(dirKey,()=>{ player.x=nx; player.y=ny; draw(); checkGoal(); });
+  } else { player.x=nx; player.y=ny; draw(); checkGoal(); }
 }
+
+// ====== Kiểm tra thắng ======
+function checkGoal(){
+  if(player.x===goal.x && player.y===goal.y){
+    clearInterval(timerInterval);
+    const elapsed = Math.floor((Date.now()-startTime)/1000);
+    setTimeout(()=>alert("🎉 Chúc mừng! Bạn đã thoát khỏi mê cung sau "+elapsed+" giây!"),100);
+  }
+}
+
+// ====== Timer ======
+function updateTimer(){
+  const elapsed = Math.floor((Date.now()-startTime)/1000);
+  document.getElementById('timer').textContent="⏱ Thời gian: "+elapsed+" giây";
+}
+
+// ====== Controls ======
 document.addEventListener('keydown',(e)=>{
   if(e.key==='ArrowUp') tryMove(0,-1);
   if(e.key==='ArrowDown') tryMove(0,1);
   if(e.key==='ArrowLeft') tryMove(-1,0);
   if(e.key==='ArrowRight') tryMove(1,0);
 });
+
+// ====== Khởi tạo ======
 carveDFS(1,1); draw();
+timerInterval=setInterval(updateTimer,1000);
 </script>
 </body>
 </html>
