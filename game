@@ -2,7 +2,7 @@
 <html lang="vi">
 <head>
 <meta charset="UTF-8">
-<title>Mê cung trắc nghiệm</title>
+<title>Mê cung Trắc nghiệm</title>
 <style>
   canvas { border:1px solid #333; display:block; margin:10px auto; }
   #quiz { display:none; background:#fff; padding:10px; border:1px solid #333; max-width:400px; margin:10px auto; }
@@ -26,10 +26,10 @@ let openedDirections = new Set();
 let startTime = Date.now();
 let timerInterval;
 
-// ====== Load câu hỏi từ localStorage ======
+// Load câu hỏi từ localStorage
 let questions = JSON.parse(localStorage.getItem("quizData") || "[]");
 
-// ====== Sinh mê cung ======
+// Sinh mê cung
 function carveDFS(x,y){
   grid[y][x]=0;
   const dirs=[[2,0],[0,2],[-2,0],[0,-2]].sort(()=>Math.random()-0.5);
@@ -50,7 +50,7 @@ function isJunction(x,y){
   return open>=3;
 }
 
-// ====== Vẽ mê cung ======
+// Vẽ mê cung
 function draw(){
   ctx.fillStyle='#222'; ctx.fillRect(0,0,canvas.width,canvas.height);
   for(let y=0;y<H;y++){
@@ -72,7 +72,7 @@ function draw(){
   ctx.fillRect(player.x*CELL+6,player.y*CELL+6,CELL-12,CELL-12);
 }
 
-// ====== Câu hỏi ======
+// Câu hỏi
 function askQuestion(dirKey,cbOpen){
   if(questions.length===0){ alert("Chưa có câu hỏi!"); cbOpen(); return; }
   const q=questions[Math.floor(Math.random()*questions.length)];
@@ -88,7 +88,7 @@ function askQuestion(dirKey,cbOpen){
   };
 }
 
-// ====== Di chuyển ======
+// Di chuyển
 function tryMove(dx,dy){
   const nx=player.x+dx, ny=player.y+dy;
   if(grid[ny]?.[nx]!==0) return;
@@ -98,7 +98,7 @@ function tryMove(dx,dy){
   } else { player.x=nx; player.y=ny; draw(); checkGoal(); }
 }
 
-// ====== Kiểm tra thắng ======
+// Kiểm tra thắng
 function checkGoal(){
   if(player.x===goal.x && player.y===goal.y){
     clearInterval(timerInterval);
@@ -107,13 +107,13 @@ function checkGoal(){
   }
 }
 
-// ====== Timer ======
+// Timer
 function updateTimer(){
   const elapsed = Math.floor((Date.now()-startTime)/1000);
   document.getElementById('timer').textContent="⏱ Thời gian: "+elapsed+" giây";
 }
 
-// ====== Controls ======
+// Controls
 document.addEventListener('keydown',(e)=>{
   if(e.key==='ArrowUp') tryMove(0,-1);
   if(e.key==='ArrowDown') tryMove(0,1);
@@ -121,7 +121,7 @@ document.addEventListener('keydown',(e)=>{
   if(e.key==='ArrowRight') tryMove(1,0);
 });
 
-// ====== Khởi tạo ======
+// Khởi tạo
 carveDFS(1,1); draw();
 timerInterval=setInterval(updateTimer,1000);
 </script>
