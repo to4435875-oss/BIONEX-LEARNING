@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8">
+<title>Admin Setup Câu hỏi</title>
+</head>
+<body>
+<h2>🛠️ Quản trị câu hỏi trắc nghiệm</h2>
+<form id="qForm">
+  <label>Câu hỏi: <input type="text" id="prompt" required></label><br>
+  <label>Đáp án A: <input type="text" id="c0" required></label><br>
+  <label>Đáp án B: <input type="text" id="c1" required></label><br>
+  <label>Đáp án C: <input type="text" id="c2" required></label><br>
+  <label>Đáp án D: <input type="text" id="c3" required></label><br>
+  <label>Đáp án đúng (0-3): <input type="number" id="answerIndex" min="0" max="3" required></label><br>
+  <button type="submit">➕ Thêm câu hỏi</button>
+</form>
+
+<h3>📋 Danh sách câu hỏi</h3>
+<ul id="list"></ul>
+
+<script>
+let questions = JSON.parse(localStorage.getItem("quizData") || "[]");
+
+function renderList(){
+  const list=document.getElementById('list');
+  list.innerHTML="";
+  questions.forEach((q,i)=>{
+    const li=document.createElement('li');
+    li.textContent=`${i+1}. ${q.prompt} (Đáp án đúng: ${q.choices[q.answerIndex]})`;
+    list.appendChild(li);
+  });
+}
+
+document.getElementById('qForm').onsubmit=(e)=>{
+  e.preventDefault();
+  const q={
+    prompt:document.getElementById('prompt').value,
+    choices:[
+      document.getElementById('c0').value,
+      document.getElementById('c1').value,
+      document.getElementById('c2').value,
+      document.getElementById('c3').value
+    ],
+    answerIndex:Number(document.getElementById('answerIndex').value)
+  };
+  questions.push(q);
+  localStorage.setItem("quizData",JSON.stringify(questions));
+  renderList();
+  e.target.reset();
+};
+
+renderList();
+</script>
+</body>
+</html>
